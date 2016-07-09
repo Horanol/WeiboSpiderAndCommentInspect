@@ -13,16 +13,18 @@ import org.jsoup.select.Elements;
 
 import com.Weibo.Beans.CommentInfo;
 import com.Weibo.Beans.RepostInfo;
+import com.Weibo.Exceptions.EmptyPageException;
 
 public class RepostParser {
 	
 	public static RepostInfo getRepostInfo(Element singleRepostElem,int repostNum) {
-		int reposerId = getReposerId(singleRepostElem);
+		long reposerId = getReposerId(singleRepostElem);
 		String reposerName = getReposerName(singleRepostElem);
 		String repostFrom = getFromName(singleRepostElem);
 		String repostTime = getRepostTime(singleRepostElem);
 		String repostUrl = getRepostUrl(singleRepostElem);
-		RepostInfo repostInfo = new RepostInfo(reposerId,reposerName, repostNum, repostTime, repostFrom,repostUrl);
+		String repostReason = getRepostReason(singleRepostElem);
+		RepostInfo repostInfo = new RepostInfo(reposerId,reposerName, repostNum, repostTime, repostFrom,repostUrl,repostReason);
 		return repostInfo;
 	}
 	/**
@@ -67,15 +69,15 @@ public class RepostParser {
 	 * @param element
 	 * @return
 	 */
-	private static int getReposerId(Element element) {
+	private static long getReposerId(Element element) {
 		String cssQuery = "a[node-type=\"name\"]";
 		Element nameElement = element.select(cssQuery).first();
 		String idText = null;
 		if (nameElement != null) {
 			 idText = nameElement.attr("usercard");
-			 idText = idText.substring(idText.indexOf("id=")+1);
+			 idText = idText.substring(3);
 		}
-		int id = Integer.parseInt(idText);
+		long id = Long.parseLong(idText);
 		return id;
 	}
 	/**
@@ -87,7 +89,6 @@ public class RepostParser {
 		//截取//<a ... /> 部分
 		String name = null;
 		String patternQuery = "//<a.*?</a>";
-		String rootNameQuery = "rootname=.*?&";
 		Pattern pattern = Pattern.compile(patternQuery);
 		Matcher matcher = pattern.matcher(element.toString());
 		if (matcher.find()) {
@@ -96,16 +97,8 @@ public class RepostParser {
 			int start = name.indexOf("@")+1;
 			int end = name.indexOf("</a>");
 			name = name.substring(start,end);
-		}else {//若没有找到，可能是根节点的转发，所以fromName是rootName
-			pattern = Pattern.compile(rootNameQuery);
-			matcher = pattern.matcher(element.toString());
-			if (matcher.find()) {
-				name = matcher.group().trim();
-				//截取=和&中间的名字
-				int start = name.indexOf("=")+1;
-				int end = name.indexOf("&");
-				name = name.substring(start,end);
-			}
+		}else {//若没有找到，可能是从根节点的转发，所以fromName是rootName
+			name = "root";
 		} 
 			
 		return name;
@@ -156,7 +149,7 @@ public class RepostParser {
 	 * @param element
 	 * @return
 	 */
-	public static String getRepostReason(Element element) {
+	private static String getRepostReason(Element element) {
 		String cssQuery = "span[node-type=\"text\"]";
 		Element reasonElement = element.select(cssQuery).first();
 		StringBuilder reasonText = null;
@@ -191,10 +184,15 @@ public class RepostParser {
 	 *  解析html文档，把转发量大于阈值的节点组成RepostInfo实体和CommentInfo实体，返回实体Map
 	 * @param document
 	 * @return
+	 * @throws EmptyPageException 
 	 */
-	public static Map<RepostInfo, CommentInfo> parseContentToBeans(Document document) {
-		int threshold = 10;
+	public static Map<RepostInfo, CommentInfo> parseContentToBeans(Document document) throws EmptyPageException {
+		int threshold = 0;
 		List<Element> singleReposts = splitSingleRepost(document);
+		if (singleReposts == null || singleReposts.isEmpty()) {
+			System.out.println(Thread.currentThread().getName()+":  current page is empty!!");
+			throw new EmptyPageException();
+		}
 		Map<RepostInfo, CommentInfo> infos = new HashMap<>();
 		for (Element singleRepostElem : singleReposts) {
 			int repostNum = RepostParser.getRepostNum(singleRepostElem);
@@ -202,7 +200,7 @@ public class RepostParser {
 				//组装RepostInfo
 				RepostInfo repostInfo = RepostParser.getRepostInfo(singleRepostElem, repostNum);
 				//组装CommentInfo
-				String repostReason = RepostParser.getRepostReason(singleRepostElem);
+				String repostReason = repostInfo.getRepostReason();
 				int vote = RepostParser.getVotes(singleRepostElem);
 				CommentInfo commentInfo = new CommentInfo(0,repostInfo.getId() ,repostInfo.getStringRepostTime(), String.valueOf(System.currentTimeMillis()), repostReason, vote);
 				

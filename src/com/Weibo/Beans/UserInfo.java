@@ -2,7 +2,7 @@ package com.Weibo.Beans;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class UserInfo {
+public class UserInfo implements Info {
 	private int id;
 	private String name;
 	private int fansCount;

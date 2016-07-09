@@ -2,6 +2,9 @@ package com.Weibo.Utils;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+
+import com.Weibo.Exceptions.LogicException;
+
 import net.sf.json.JSONObject;
 
 public class JsonParser {
@@ -10,8 +13,9 @@ public class JsonParser {
 	 * 
 	 * @param content
 	 * @return
+	 * @throws LogicException 
 	 */
-	public static Document getHtmlDocFromJSON(String content) {
+	public static Document getHtmlDocFromJSON(String content) throws LogicException {
 		Document htmlDoc = null;
 		try {
 			JSONObject object = JSONObject.fromObject(content);
@@ -19,7 +23,8 @@ public class JsonParser {
 			String htmlString = dataObject.getString("html");
 			htmlDoc = Jsoup.parse(htmlString);
 		} catch (Exception e) {
-			System.err.println(Thread.currentThread().getName()+":   exception from method : JsonParser.getHtmlDocFromJSON retrying...");
+			System.err.println(Thread.currentThread().getName()+":   failed to parse jsonContent to HtmlDoc,retrying...");
+			throw new LogicException();
  		}
 		return htmlDoc;
 	}

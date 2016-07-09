@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class CommentInfo {
+public class CommentInfo implements Info {
 	private int id;
 	private int weiboId;
 	private long userId;

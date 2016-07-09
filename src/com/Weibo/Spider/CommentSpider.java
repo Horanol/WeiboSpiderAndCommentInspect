@@ -5,61 +5,57 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import com.Weibo.Beans.CommentInfo;
+import com.Weibo.Exceptions.EmptyPageException;
+import com.Weibo.Exceptions.LogicException;
+import com.Weibo.Exceptions.WebException;
 import com.Weibo.Fetcher.CommentFetcher;
 import com.Weibo.Queues.CommentLinkQueue;
+import com.Weibo.Queues.VisitedCommentLinkSet;
 import com.Weibo.Services.CommentHandler;
 
 public class CommentSpider implements Runnable {
 	public List<CommentInfo> infoList = new LinkedList<>();
 	public CommentFetcher fetcher = new CommentFetcher();
 	public CommentHandler handler = new CommentHandler();
-	private CountDownLatch latch;
 	private int retryTimes = 5;
-	private boolean result = false;
-
-	public CommentSpider(CountDownLatch latch) {
-		this.latch = latch;
-	}
 
 	@Override
 	public void run() {
 		String newLink = null;
 		while ((newLink = CommentLinkQueue.take()) != null) {// 当队列不为空时
-			System.out.println(Thread.currentThread().getName() + ":   " + "current link :   " + newLink+"   Queue size:   "+CommentLinkQueue.size());
-			String jsonContent = fetcher.fetch(newLink);// 发出第一个请求
-			while (jsonContent == null && retryTimes-->=0) {//若获取json数据失败，等待2秒，重复尝试获取3次
+			if (VisitedCommentLinkSet.contains(newLink)) {
+				continue;
+			}
+			System.out.println(Thread.currentThread().getName()+":  CommentQueue.size() is "+CommentLinkQueue.size()
+			+"  url is "+newLink);
+			while (retryTimes-- >= 0) {
+				String jsonContent = null;
 				try {
-					Thread.sleep(2000);
-				} catch (Exception e) {
-				}
-				jsonContent = fetcher.fetch(newLink);
-			}
-			retryTimes = 3;
-			
-			while (jsonContent != null && retryTimes-- >= 0) {
-				result = handler.handle(jsonContent);
-				if (result) {
-					break;
-				} else {// 若获取数据失败，睡眠一段时间，重新发起请求
-					try {
-						Thread.sleep(2000);
-					} catch (Exception e) {
+					jsonContent = fetcher.fetch(newLink);// 发出第一个请求
+					handler.handle(jsonContent);
+				} catch (LogicException e) {
+					if (e instanceof EmptyPageException) {
+						break;
 					}
-					jsonContent = fetcher.fetch(newLink);
-				}
+				} catch (WebException e) {
+				} 
+				sleepAWhile(2000);
 			}
-			if (result == false){
-				System.err.println(Thread.currentThread().getName() + ":    failed to fetch data from link :   " + newLink);
+			if (retryTimes<0) {
+				System.err.println(
+						Thread.currentThread().getName() + ":    failed to fetch data from link :   " + newLink);
+			}else {
+				System.out.println(Thread.currentThread().getName() + ":   finished!");
 			}
-			result = false;
-			retryTimes = 3;
-			System.out.println(Thread.currentThread().getName() + ":   finished!");
-			try {
-				Thread.sleep(2000);// 防止请求发送过快
-			} catch (InterruptedException e) {
-				break;
-			}
+			VisitedCommentLinkSet.add(newLink);
+			sleepAWhile(2000);
+			retryTimes = 5;
 		}
-		latch.countDown();
+	}
+	private void sleepAWhile(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (Exception e) {
+		}
 	}
 }

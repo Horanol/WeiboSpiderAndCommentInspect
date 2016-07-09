@@ -43,6 +43,9 @@ public class CommentParser {
 	public static List<CommentInfo> parseContentToBeans(Document document) {
 		List<CommentInfo> list = new LinkedList<>();
 		List<Element> elements = splitSingleComment(document);
+		if (elements == null) {
+			return null;
+		}
 		for (Element singleElem : elements) {
 			String content = getContent(singleElem);
 			if (content == null || content.length() == 0) {

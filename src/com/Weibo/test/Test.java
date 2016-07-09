@@ -21,8 +21,7 @@ import org.ansj.domain.Term;
 import org.ansj.splitWord.analysis.ToAnalysis;
 import org.ansj.util.FilterModifWord;
 
-import com.Weibo.Dao.DBHandler;
-
+import com.Weibo.Dao.CommentDAO;
 import libsvm.svm_predict;
 import libsvm.svm_scale;
 import libsvm.svm_train;
@@ -31,19 +30,20 @@ public class Test {
 	private static Map<String, Float> getEmotionalWordMap() {
 		Map<String, Float> map = new HashMap<>();
 
-		File file1 = new File("F:\\情感词典\\汉语情感词极值表.txt");
-		File file2 = new File("F:\\情感词典\\ntusd.txt");
-		File file3 = new File("F:\\情感词典\\NetWords.txt");
+		File file1 = new File("./Dictionarys/汉语情感词极值表.txt");
+		File file2 = new File("./Dictionarys/ntusd.txt");
+		File file3 = new File("./Dictionarys/NetWords.txt");
 		try (BufferedReader bufferedReader1 = new BufferedReader(new InputStreamReader(new FileInputStream(file1)));
 				BufferedReader bufferedReader2 = new BufferedReader(new InputStreamReader(new FileInputStream(file2)));
 				BufferedReader bufferedReader3 = new BufferedReader(
 						new InputStreamReader(new FileInputStream(file3)))) {
 			String string = null;
 			int index = 0;
-//			while ((string = bufferedReader1.readLine()) != null) {
-//				index = string.indexOf("\t");
-//				map.put(string.substring(0, index), Float.valueOf(string.substring(index + 1, string.length())));
-//			}
+			// while ((string = bufferedReader1.readLine()) != null) {
+			// index = string.indexOf("\t");
+			// map.put(string.substring(0, index),
+			// Float.valueOf(string.substring(index + 1, string.length())));
+			// }
 			while ((string = bufferedReader2.readLine()) != null) {
 				index = string.indexOf("\t");
 				map.put(string.substring(0, index), Float.valueOf(string.substring(index + 1, string.length())));
@@ -117,25 +117,36 @@ public class Test {
 				iterator.remove();
 			}
 		}
-
 		FilterModifWord.insertStopWords(stopWords);
+
 		// 获取评论列表
-		List<String> commentList = DBHandler.getComments();
-		File file = new File("F:\\train_comment.txt");
-		try (FileWriter writer = new FileWriter(file)) {
-			for (String string : commentList) {
-				List<Term> terms = FilterModifWord
-						.modifResult(ToAnalysis.parse(string.substring(string.indexOf('\t') + 1, string.length())));
-				String data = getSVMFormatData(terms, emotionalMap, oppositeWords, degreeMap);
-				if (data != null && data.length() !=0) {
-					writer.write(string.substring(0, string.indexOf('\t')));
-					writer.write("  ");
-					writer.write(data);
-					writer.write("\n");
+		File rawCommentDir = new File("./Comments/RawComments");
+		File parsedCommentDir = new File("./Comments/ParsedComments");
+		File[] fileList = rawCommentDir.listFiles();
+		
+		for (int i = 0; i < fileList.length; i++) {
+			File rawComment = fileList[i];
+			if (rawComment.isFile()) {
+				List<String> commentList = CommentDAO.getComments(rawComment.getPath());
+				File parsedComment = new File(parsedCommentDir+"/"+rawComment.getName().substring(0, rawComment.getName().length()-4)+"_parsed.txt");
+				
+				for (String string : commentList) {
+					try (FileWriter writer = new FileWriter(parsedComment)) {
+						List<Term> terms = FilterModifWord.modifResult(
+								ToAnalysis.parse(string.substring(string.indexOf('\t') + 1, string.length())));
+						String data = getSVMFormatData(terms, emotionalMap, oppositeWords, degreeMap);
+						if (data != null && data.length() != 0) {
+							writer.write(string.substring(0, string.indexOf('\t')));
+							writer.write("  ");
+							writer.write(data);
+							writer.write("\n");
+						}
+						writer.write(string);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 
 	}
@@ -165,20 +176,20 @@ public class Test {
 	}
 
 	public static void main(String[] args) {
-//		parseCommentToTrainText();
-//		System.out.println("TrainText has created!");
+		 parseCommentToTrainText();
+		 System.out.println("TrainText has created!");
 
 		String filepath = "F:\\SVM评论测试\\";
-		String[] arg = { "-v", "5", filepath + "train_comment.txt", filepath + "model_comment.txt" };
-		String[] parg = { filepath + "predict_comment.txt", filepath + "model_comment.txt",
+		String[] trainArgs = { "-v", "5", filepath + "train_comment.txt", filepath + "model_comment.txt" };
+		String[] predictArgs = { filepath + "predict_comment.txt", filepath + "model_comment.txt",
 				filepath + "predictResult_comment.txt" };
 		System.out.println("----------------SVM运行开始-----------------");
 
-//		String[] sarg = { "-s", filepath + "scaledTrain_comment.txt", filepath + "train_comment.txt" };
+		// String[] scaleArgs = { "-s", filepath +"scaledTrain_comment.txt",filepath + "train_comment.txt" };
 		try {
-//			svm_scale.main(sarg);// 缩小范围
-			svm_train.main(arg);// 训练
-			svm_predict.main(parg);// 预测或分类
+			// svm_scale.main(scaleArgs);// 缩小范围
+			svm_train.main(trainArgs);// 训练
+			svm_predict.main(predictArgs);// 预测或分类
 		} catch (IOException e) {
 
 			e.printStackTrace();

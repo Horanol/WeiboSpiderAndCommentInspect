@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class WeiboInfo {
+public class WeiboInfo implements Info {
 	private int id;
 	private int userId;
 	private String createTime;

@@ -3,7 +3,7 @@ package com.Weibo.Queues;
 import java.util.HashSet;
 import java.util.Set;
 
-public class VistedCommentLinkSet {
+public class VisitedCommentLinkSet {
 	public static Set<String> vistedCommentLinkSet = new HashSet<>();
 	public static synchronized boolean contains(String o) {
 		return vistedCommentLinkSet.contains(o);

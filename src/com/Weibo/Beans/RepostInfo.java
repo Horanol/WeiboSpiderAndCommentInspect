@@ -1,24 +1,30 @@
 package com.Weibo.Beans;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RepostInfo {
+public class RepostInfo implements Info {
 	private int id;
-	private int userId;
+	private long userId;
 	private String reposerName;
 	private int repostNum;
 	private String repostTime;
 	private String repostFrom;
 	private String repostUrl;
+	private String repostReason;
 	private static AtomicInteger autoId = new AtomicInteger(1);
+	public String getRepostReason() {
+		return repostReason;
+	}
+	public void setRepostReason(String repostReason) {
+		this.repostReason = repostReason;
+	}
 	
-	public int getUserId() {
+	public long getUserId() {
 		return userId;
 	}
-	public void setUserId(int userId) {
+	public void setUserId(long userId) {
 		this.userId = userId;
 	}
 	public int getId() {
@@ -68,7 +74,7 @@ public class RepostInfo {
 	public void setRepostNum(int repostNum) {
 		this.repostNum = repostNum;
 	}
-	public RepostInfo(int userId,String reposerName, int repostNum,String repostTime,String repostFrom,String repostUrl) {
+	public RepostInfo(long userId,String reposerName, int repostNum,String repostTime,String repostFrom,String repostUrl,String repostReason) {
 		this.id = autoId.getAndIncrement();
 		this.userId = userId;
 		this.reposerName = reposerName;
@@ -76,6 +82,7 @@ public class RepostInfo {
 		this.repostTime = repostTime;
 		this.repostFrom = repostFrom;
 		this.repostUrl = repostUrl;
+		this.repostReason = repostReason;
 	}
 	@Override
 	public String toString() {

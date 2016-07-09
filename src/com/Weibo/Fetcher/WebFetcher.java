@@ -38,11 +38,7 @@ public class WebFetcher {
 					if (status == 501) {
 						System.out.println("501 error found！waiting for 20 seconds");
 						cookies = getAvaliableCookie();
-						try {
-							Thread.sleep(20000);
-						} catch (InterruptedException e1) {
-							e1.printStackTrace();
-						}
+						sleepAWhile(20000);
 					}else {
 						System.out.println("HttpStatusException occurs !");
 						break;
@@ -63,10 +59,11 @@ public class WebFetcher {
 	 * @return
 	 */
 	public static String fetchJSON(String url) {
+		int waitTime = 40;
 		String body = null;
 		Response response = null;
 		int status = 501;
-		while (status == 501) {// 若出现501错误，等待40秒钟再发起请求
+		while (status == 501) {// 若出现501错误，等待40秒钟再发起请求，以后每次等待时间延长20秒
 			try {
 				Map<String, String> cookies = getAvaliableCookie();
 				response = Jsoup.connect(url).header("Connection", "keep-alive").cookies(cookies)
@@ -78,27 +75,21 @@ public class WebFetcher {
 				if (e instanceof HttpStatusException) {
 					HttpStatusException statusException = (HttpStatusException) e;
 					status = statusException.getStatusCode();
-					if (status == 501) {
-						System.out.println("501 error found！waiting for 20 seconds");
-						try {
-							Thread.sleep(40000);
-						} catch (InterruptedException e1) {
-							e1.printStackTrace();
+					if (status == 501 ) {
+						if (waitTime>100) {
+							break;
 						}
+						System.out.println("501 error found！waiting for "+waitTime+" seconds");
+						sleepAWhile(waitTime*1000);
+						waitTime+=20;
 					}else {
 						System.out.println("HttpStatusException occurs ! waiting for 10 sec");
-						try {
-							Thread.sleep(10000);
-						} catch (InterruptedException e1) {
-						}
+						sleepAWhile(10000);
 						break;
 					}
 				}else {
 					System.out.println("IOException occurs ! retrying after 10 seconds...");
-					try {
-						Thread.sleep(10000);
-					} catch (InterruptedException e1) {
-					}
+					sleepAWhile(10000);
 					break;
 				}
 			}
@@ -155,5 +146,12 @@ public class WebFetcher {
 
 		int index = random.nextInt(3);
 		return cookies.get(index);
+	}
+	
+	private static void sleepAWhile(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (Exception e) {
+		}
 	}
 }
